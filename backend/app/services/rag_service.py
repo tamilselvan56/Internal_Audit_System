@@ -1,3 +1,4 @@
+# type: ignore
 import os
 import json
 import re
@@ -166,24 +167,30 @@ def _clean_text(text: str) -> str:
 
 class RAGService:
     def __init__(self) -> None:
-        self.embeddings: HuggingFaceEmbeddings = HuggingFaceEmbeddings(
-            model_name="all-MiniLM-L6-v2",
-            model_kwargs={"device": "cpu"}
-        )
-        self.vectorstore: Optional[Chroma] = None
-        self.persist_dir: str = settings.CHROMA_PERSIST_DIR
-        self._initialize()
+    self._embeddings = None
+    self._vectorstore = None
+    self.persist_dir: str = settings.CHROMA_PERSIST_DIR
+    os.makedirs(self.persist_dir, exist_ok=True)
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
-    def _initialize(self) -> None:
-        os.makedirs(self.persist_dir, exist_ok=True)
-        os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-        self.vectorstore = Chroma(
+@property
+def vectorstore(self):
+    if self._vectorstore is None:
+        from langchain_community.vectorstores import Chroma
+        from langchain_community.embeddings import HuggingFaceEmbeddings
+        self._embeddings = HuggingFaceEmbeddings(
+            model_name="all-MiniLM-L6-v2",
+            model_kwargs={"device": "cpu"},
+            encode_kwargs={"batch_size": 8}
+        )
+        self._vectorstore = Chroma(
             persist_directory=self.persist_dir,
-            embedding_function=self.embeddings,
+            embedding_function=self._embeddings,
             collection_name="audit_knowledge"
         )
-        if self.vectorstore._collection.count() == 0:
+        if self._vectorstore._collection.count() == 0:
             self._seed_defaults()
+    return self._vectorstore
 
     def _seed_defaults(self) -> None:
         assert self.vectorstore is not None

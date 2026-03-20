@@ -1,3 +1,4 @@
+# type: ignore
 """
 Seed dummy employees, assets, and assignments into the database.
 Usage: python scripts/seed_dummy_data.py

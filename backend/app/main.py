@@ -77,6 +77,8 @@ async def startup():
     create_tables()
     print(f"✅ {settings.APP_NAME} started")
     print(f"📚 API docs: http://localhost:8000/docs")
+    # NOTE: RAG service loads lazily on first /api/query call
+    # Do NOT call rag_service here — it will OOM on free tier
 
 
 @app.get("/")
