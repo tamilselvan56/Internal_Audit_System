@@ -1,0 +1,46 @@
+# Environment files
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Python virtual environments
+.venv/
+venv/
+env/
+backend/.venv/
+backend/venv/
+
+# Python caches and build output
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Backend local data
+backend/chroma_db/
+backend/uploads/
+*.sqlite3
+*.db
+*.log
+
+# Frontend dependencies and build output
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
