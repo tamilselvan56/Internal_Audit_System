@@ -118,15 +118,24 @@ def delete_document(
 
 @router.get("/stats")
 def get_kb_stats(current_user: User = Depends(require_role(UserRole.admin))):
-    assert rag_service.vectorstore is not None
-    total_chunks = rag_service.vectorstore._collection.count()
     docs = rag_service.list_documents()
+    warning = None
+    try:
+        assert rag_service.vectorstore is not None
+        total_chunks = rag_service.vectorstore._collection.count()
+    except Exception as e:
+        total_chunks = 0
+        warning = f"Vector store unavailable: {str(e)}"
+
     # 5 default SOPs: HR, Finance, Admin, IT onboarding + Offboarding
     default_doc_count = 5
-    return {
+    response = {
         "total_chunks": total_chunks,
         "custom_documents": len(docs),
         "default_documents": default_doc_count,
         "total_documents": len(docs) + default_doc_count,
         "categories": list({d["category"] for d in docs}) if docs else []
     }
+    if warning:
+        response["warning"] = warning
+    return response

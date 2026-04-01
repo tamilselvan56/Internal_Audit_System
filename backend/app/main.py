@@ -47,7 +47,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import create_tables
-from app.api import auth, hr, it, query, knowledge
+from app.core.logging import StructuredLoggingMiddleware, setup_logging
+from app.api import auth, hr, it, query, knowledge, documents
+
+setup_logging("INFO")
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -64,12 +67,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(StructuredLoggingMiddleware)
 
 app.include_router(auth.router)
 app.include_router(hr.router)
 app.include_router(it.router)
 app.include_router(query.router)
 app.include_router(knowledge.router)
+app.include_router(documents.router)
 
 
 @app.on_event("startup")

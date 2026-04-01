@@ -1,0 +1,19 @@
+Phase,Step #,Action Item,Asset Types,Required?,Evidence Required,Responsible Role,SLA (Days),Notes
+Physical Verification,1,Receive asset from courier or vendor and sign delivery challan,All,Yes,Signed delivery note,IT,1,Keep a copy of delivery challan
+Physical Verification,2,Inspect device for physical damage,All,Yes,Photo if damage found,IT,1,Photograph any damage before unpacking further
+Physical Verification,3,Verify box contents against purchase order or invoice,All,Yes,Tick-off on PO copy,IT,1,Check included accessories
+Physical Verification,4,Match serial number on device with invoice,All,Yes,Serial verified checkbox,IT,1,Flag mismatch immediately
+Asset Tagging,5,Affix asset tag to device,All,Yes,Photo of tagged device,IT,1,Tag should be tamper-evident
+Asset Tagging,6,Record asset tag in asset management system,All,Yes,AMS entry screenshot,IT,1,Use standard tag format
+IT Configuration,7,Install or reinstall OS and activate license,Laptop/Desktop,Yes,Activation screenshot,IT,2,Use approved corporate image
+IT Configuration,8,Join device to company domain,Laptop/Desktop,Yes,Domain join confirmation,IT,1,Verify policy sync
+IT Configuration,9,Install antivirus or EDR,Laptop/Desktop,Yes,Console screenshot,IT,1,Verify protection status
+IT Configuration,10,Apply software baseline,Laptop/Desktop,Yes,Installed apps screenshot,IT,1,Office, browser, VPN, collaboration tools
+Documentation,11,Upload purchase invoice,All,Yes,Invoice PDF,IT/Finance,2,Link to vendor details
+Documentation,12,Upload warranty card or certificate,All,Yes,Warranty scan,IT,2,Record expiry date
+Documentation,13,Generate allocation form,All,Yes,Generated PDF,IT,1,Use standard template
+Documentation,14,Get allocation form signed,All,Yes,Signed form PDF,IT/HR,1,Store with employee record
+Finance Registration,15,Register asset in finance or ERP system,All,Yes,ERP reference or screenshot,Finance,3,Include purchase cost
+Finance Registration,16,Create depreciation schedule entry,Capital assets,Recommended,Depreciation sheet entry,Finance,5,As per accounting policy
+Assignment,17,Confirm intake checklist is complete before assignment,All,Yes,Ready-to-assign state,IT,0,System should block incomplete assets
+Assignment,18,Assign asset and link to employee profile,All,Yes,Assignment record,IT,0,Status moves available to assigned

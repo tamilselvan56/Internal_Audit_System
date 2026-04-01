@@ -288,15 +288,23 @@ export default function KnowledgeBase() {
 
   const load = async () => {
     setLoading(true)
-    try {
-      const [docsRes, statsRes] = await Promise.all([getDocuments(), getKBStats()])
-      setDocs(docsRes.data)
-      setStats(statsRes.data)
-    } catch (err) {
-      toast.error('Failed to load knowledge base')
-    } finally {
-      setLoading(false)
+    const [docsRes, statsRes] = await Promise.allSettled([getDocuments(), getKBStats()])
+
+    if (docsRes.status === 'fulfilled') {
+      setDocs(docsRes.value.data || [])
+    } else {
+      setDocs([])
+      toast.error('Failed to load knowledge documents')
     }
+
+    if (statsRes.status === 'fulfilled') {
+      setStats(statsRes.value.data || null)
+    } else {
+      setStats(null)
+      toast.error('Failed to load knowledge stats')
+    }
+
+    setLoading(false)
   }
 
   useEffect(() => { load() }, [])

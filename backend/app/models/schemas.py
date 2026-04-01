@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
-from app.models.models import UserRole, AssetStatus, EmployeeStatus
+from app.models.models import UserRole, AssetStatus, EmployeeStatus, AssetCondition
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -76,7 +76,6 @@ class EmployeeOut(BaseModel):
     emergency_contact: Optional[str]
     personal_email: Optional[str]
     aadhaar_number: Optional[str]
-    sla_met: Optional[str]
     comments: Optional[str]
 
     onboarding_steps: List["OnboardingStepOut"] = []
@@ -110,7 +109,6 @@ class OnboardingStepOut(BaseModel):
     completed_by: Optional[str]
     completed_at: Optional[datetime]
     notes: Optional[str]
-    sla_met: Optional[str]
 
     class Config:
         from_attributes = True
@@ -120,7 +118,6 @@ class StepUpdate(BaseModel):
     is_completed: bool
     completed_by: Optional[str] = None
     notes: Optional[str] = None
-    sla_met: Optional[str] = None
 
 
 # ── Relieving Steps ───────────────────────────────────────────────────────────
@@ -132,7 +129,6 @@ class RelievingStepOut(BaseModel):
     completed_by: Optional[str]
     completed_at: Optional[datetime]
     notes: Optional[str]
-    sla_met: Optional[str]
 
     class Config:
         from_attributes = True
@@ -151,7 +147,17 @@ class AssetCreate(BaseModel):
     model: Optional[str] = None
     serial_number: Optional[str] = None
     purchase_date: Optional[datetime] = None
+    purchase_cost: Optional[str] = None
     warranty_expiry: Optional[datetime] = None
+    vendor_name: Optional[str] = None
+    vendor_invoice_no: Optional[str] = None
+    mac_address: Optional[str] = None
+    processor: Optional[str] = None
+    ram_gb: Optional[int] = None
+    storage_gb: Optional[int] = None
+    os_installed: Optional[str] = None
+    location: Optional[str] = None
+    condition: Optional[AssetCondition] = None
     notes: Optional[str] = None
 
 
@@ -162,8 +168,18 @@ class AssetOut(BaseModel):
     brand: Optional[str]
     model: Optional[str]
     serial_number: Optional[str]
+    condition: Optional[AssetCondition]
     purchase_date: Optional[datetime]
+    purchase_cost: Optional[str]
     warranty_expiry: Optional[datetime]
+    vendor_name: Optional[str]
+    vendor_invoice_no: Optional[str]
+    mac_address: Optional[str]
+    processor: Optional[str]
+    ram_gb: Optional[int]
+    storage_gb: Optional[int]
+    os_installed: Optional[str]
+    location: Optional[str]
     status: AssetStatus
     current_assigned_to: Optional[int]
     notes: Optional[str]
@@ -192,11 +208,67 @@ class AssetAssignmentOut(BaseModel):
     employee_id: int
     action: str
     action_date: datetime
-    performed_by: str
+    performed_by: Optional[str]
     reason: Optional[str]
+    previous_asset_id: Optional[int] = None
 
     class Config:
         from_attributes = True
+
+
+class AssetRepairTicketOut(BaseModel):
+    id: int
+    asset_id: int
+    ticket_no: str
+    issue_reported: str
+    reported_by: Optional[str]
+    vendor: Optional[str]
+    estimated_cost: Optional[str]
+    actual_cost: Optional[str]
+    repair_status: str
+    opened_at: datetime
+    closed_at: Optional[datetime]
+    resolution: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class AssetDocumentOut(BaseModel):
+    id: int
+    asset_id: int
+    title: str
+    category: Optional[str]
+    file_path: str
+    file_name: str
+    file_size_kb: Optional[int]
+    uploaded_by: Optional[str]
+    uploaded_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AssetRepairOpenResponse(BaseModel):
+    success: bool
+    ticket_no: str
+    asset_id: int
+
+
+class AssetRepairCloseResponse(BaseModel):
+    success: bool
+    asset_id: int
+    status: AssetStatus
+
+
+class AssetDocumentUploadResponse(BaseModel):
+    success: bool
+    asset_id: int
+    title: str
+    category: Optional[str]
+    file_name: str
+    file_path: str
+    file_size_kb: Optional[int]
 
 
 # ── RAG ───────────────────────────────────────────────────────────────────────

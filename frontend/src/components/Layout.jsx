@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import {
   LayoutDashboard, Users, Laptop, MessageSquare,
-  LogOut, ChevronRight, Database
+  LogOut, ChevronRight, Database, UserPlus
 } from 'lucide-react'
 
 const roleColors = {
@@ -22,6 +22,7 @@ export default function Layout({ children }) {
     { to: '/assets', icon: Laptop, label: 'IT Assets', roles: null },
     { to: '/ask', icon: MessageSquare, label: 'Ask Anything', roles: null },
     { to: '/knowledge', icon: Database, label: 'Knowledge Base', roles: ['admin'], adminOnly: true },
+    { to: '/users', icon: UserPlus, label: 'Users', roles: ['admin'], adminOnly: true },
   ]
 
   const visibleNav = navItems.filter(item =>

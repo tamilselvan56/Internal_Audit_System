@@ -2,6 +2,7 @@
 import os
 import json
 import re
+import hashlib
 from typing import List, Optional
 from datetime import datetime
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -165,6 +166,33 @@ def _clean_text(text: str) -> str:
     return text.strip()
 
 
+class SimpleHashEmbeddings:
+    """Lightweight CPU-safe embedding fallback when transformer init fails."""
+
+    def __init__(self, dim: int = 384) -> None:
+        self.dim = dim
+
+    def _embed(self, text: str) -> list[float]:
+        vec = [0.0] * self.dim
+        tokens = re.findall(r"\w+", (text or "").lower())
+        for token in tokens:
+            digest = hashlib.sha256(token.encode("utf-8")).digest()
+            idx = int.from_bytes(digest[:4], "big") % self.dim
+            sign = 1.0 if (digest[4] % 2 == 0) else -1.0
+            vec[idx] += sign
+
+        norm = sum(v * v for v in vec) ** 0.5
+        if norm > 0:
+            vec = [v / norm for v in vec]
+        return vec
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self._embed(text) for text in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._embed(text)
+
+
 class RAGService:
     def __init__(self) -> None:
         self._embeddings = None
@@ -178,11 +206,15 @@ class RAGService:
         if self._vectorstore is None:
             from langchain_community.vectorstores import Chroma
             from langchain_community.embeddings import HuggingFaceEmbeddings
-            self._embeddings = HuggingFaceEmbeddings(
-                model_name="all-MiniLM-L6-v2",
-                model_kwargs={"device": "cpu"},
-                encode_kwargs={"batch_size": 8}
-            )
+            try:
+                self._embeddings = HuggingFaceEmbeddings(
+                    model_name="all-MiniLM-L6-v2",
+                    model_kwargs={"device": "cpu"},
+                    encode_kwargs={"batch_size": 8}
+                )
+            except Exception as e:
+                print(f"Embedding init failed, using SimpleHashEmbeddings fallback: {e}")
+                self._embeddings = SimpleHashEmbeddings(dim=384)
             self._vectorstore = Chroma(
                 persist_directory=self.persist_dir,
                 embedding_function=self._embeddings,

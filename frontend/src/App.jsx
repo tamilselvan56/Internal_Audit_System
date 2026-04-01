@@ -55,6 +55,7 @@ import Employees from './pages/Employees'
 import Assets from './pages/Assets'
 import AskAnything from './pages/AskAnything'
 import KnowledgeBase from './pages/knowledgeBase'
+import Users from './pages/Users'
 
 function PrivateRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth()
@@ -87,6 +88,7 @@ export default function App() {
           <Route path="/assets" element={<PrivateRoute><Assets /></PrivateRoute>} />
           <Route path="/ask" element={<PrivateRoute><AskAnything /></PrivateRoute>} />
           <Route path="/knowledge" element={<PrivateRoute adminOnly><KnowledgeBase /></PrivateRoute>} />
+          <Route path="/users" element={<PrivateRoute adminOnly><Users /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>

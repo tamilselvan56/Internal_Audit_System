@@ -5,6 +5,9 @@
 backend/.env
 backend/.env.*
 !backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
 
 # Python virtual environments
 .venv/
@@ -26,6 +29,11 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
 
 # Backend local data
 backend/chroma_db/
@@ -38,6 +46,14 @@ backend/uploads/
 frontend/node_modules/
 frontend/dist/
 frontend/build/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Accidental local folders
+{backend/
 
 # Editor and OS files
 .vscode/

@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from typing import List
 from app.core.database import get_db
 from app.core.auth import verify_password, get_password_hash, create_access_token, get_current_user
+from app.core.rbac import Permission, require_permission
 from app.models.models import User
 from app.models.schemas import UserCreate, UserOut, Token
 
@@ -10,7 +12,11 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
 @router.post("/register", response_model=UserOut)
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
+def register(
+    user_data: UserCreate,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_permission(Permission.USER_CREATE)),
+):
     existing = db.query(User).filter(User.email == user_data.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -38,3 +44,28 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.get("/users", response_model=List[UserOut])
+def list_users(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_permission(Permission.USER_VIEW)),
+):
+    return db.query(User).order_by(User.id.desc()).all()
+
+
+@router.delete("/users/{user_id}")
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.USER_DELETE)),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot delete your own account")
+
+    db.delete(user)
+    db.commit()
+    return {"success": True, "user_id": user_id}

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -25,10 +25,18 @@ class UserRole(str, enum.Enum):
 
 
 class AssetStatus(str, enum.Enum):
+    pending = "pending"
     available = "available"
     assigned = "assigned"
     in_repair = "in_repair"
     retired = "retired"
+
+
+class AssetCondition(str, enum.Enum):
+    new = "new"
+    good = "good"
+    fair = "fair"
+    poor = "poor"
 
 
 class EmployeeStatus(str, enum.Enum):
@@ -76,13 +84,12 @@ class Employee(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    # SLA tracking
-    sla_met = Column(String(10), nullable=True)   # "Yes" / "No" / null
     comments = Column(Text, nullable=True)
 
     onboarding_steps = relationship("OnboardingStep", back_populates="employee", cascade="all, delete-orphan")
     relieving_steps = relationship("RelievingStep", back_populates="employee", cascade="all, delete-orphan")
     asset_assignments = relationship("AssetAssignment", back_populates="employee")
+    documents = relationship("EmployeeDocument", back_populates="employee", cascade="all, delete-orphan")
 
 
 class OnboardingStep(Base):
@@ -95,7 +102,6 @@ class OnboardingStep(Base):
     completed_by = Column(String(150))
     completed_at = Column(DateTime(timezone=True), nullable=True)
     notes = Column(Text, nullable=True)
-    sla_met = Column(String(10), nullable=True)   # "Yes" / "No"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     employee = relationship("Employee", back_populates="onboarding_steps")
@@ -111,7 +117,6 @@ class RelievingStep(Base):
     completed_by = Column(String(150))
     completed_at = Column(DateTime(timezone=True), nullable=True)
     notes = Column(Text, nullable=True)
-    sla_met = Column(String(10), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     employee = relationship("Employee", back_populates="relieving_steps")
@@ -121,13 +126,23 @@ class Asset(Base):
     __tablename__ = "assets"
     id = Column(Integer, primary_key=True, index=True)
     asset_tag = Column(String(50), unique=True, index=True, nullable=False)
-    asset_type = Column(String(100), nullable=False)
-    brand = Column(String(100))
-    model = Column(String(150))
-    serial_number = Column(String(100), unique=True)
+    asset_type = Column(String(100), nullable=False, index=True)
+    brand = Column(String(100), nullable=True)
+    model = Column(String(150), nullable=True)
+    serial_number = Column(String(100), unique=True, nullable=True)
+    condition = Column(enum_column(AssetCondition, "assetcondition"), default=AssetCondition.new)
     purchase_date = Column(DateTime(timezone=True), nullable=True)
+    purchase_cost = Column(String(20), nullable=True)
     warranty_expiry = Column(DateTime(timezone=True), nullable=True)
-    status = Column(enum_column(AssetStatus, "assetstatus"), default=AssetStatus.available)
+    vendor_name = Column(String(150), nullable=True)
+    vendor_invoice_no = Column(String(100), nullable=True)
+    mac_address = Column(String(50), nullable=True)
+    processor = Column(String(100), nullable=True)
+    ram_gb = Column(Integer, nullable=True)
+    storage_gb = Column(Integer, nullable=True)
+    os_installed = Column(String(100), nullable=True)
+    location = Column(String(100), nullable=True)
+    status = Column(enum_column(AssetStatus, "assetstatus"), default=AssetStatus.pending)
     current_assigned_to = Column(Integer, ForeignKey("employees.id"), nullable=True)
     notes = Column(Text, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"))
@@ -135,6 +150,11 @@ class Asset(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     assignments = relationship("AssetAssignment", back_populates="asset", foreign_keys="AssetAssignment.asset_id")
+
+    __table_args__ = (
+        Index("ix_assets_status_type", "status", "asset_type"),
+        Index("ix_assets_assigned_to", "current_assigned_to"),
+    )
 
 
 class AssetAssignment(Base):
@@ -145,11 +165,100 @@ class AssetAssignment(Base):
     action = Column(String(50), nullable=False)  # assigned, returned, replaced
     action_date = Column(DateTime(timezone=True), server_default=func.now())
     performed_by = Column(String(150))
+    performed_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     reason = Column(Text, nullable=True)
     previous_asset_id = Column(Integer, ForeignKey("assets.id"), nullable=True)
+    evidence_path = Column(String(500), nullable=True)
 
     asset = relationship("Asset", foreign_keys=[asset_id], back_populates="assignments")
     employee = relationship("Employee", back_populates="asset_assignments")
+
+    __table_args__ = (
+        Index("ix_assignment_asset_date", "asset_id", "action_date"),
+        Index("ix_assignment_employee", "employee_id"),
+    )
+
+
+class AssetRepairTicket(Base):
+    __tablename__ = "asset_repair_tickets"
+    id = Column(Integer, primary_key=True, index=True)
+    asset_id = Column(Integer, ForeignKey("assets.id"), nullable=False)
+    ticket_no = Column(String(50), unique=True, nullable=False)
+    issue_reported = Column(Text, nullable=False)
+    reported_by = Column(String(150), nullable=True)
+    reported_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    vendor = Column(String(150), nullable=True)
+    estimated_cost = Column(String(20), nullable=True)
+    actual_cost = Column(String(20), nullable=True)
+    repair_status = Column(String(30), nullable=False, default="open")
+    opened_at = Column(DateTime(timezone=True), server_default=func.now())
+    closed_at = Column(DateTime(timezone=True), nullable=True)
+    resolution = Column(Text, nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    asset = relationship("Asset", foreign_keys=[asset_id])
+
+    __table_args__ = (
+        Index("ix_repair_asset_status", "asset_id", "repair_status"),
+    )
+
+
+class AssetDocument(Base):
+    __tablename__ = "asset_documents"
+    id = Column(Integer, primary_key=True, index=True)
+    asset_id = Column(Integer, ForeignKey("assets.id"), nullable=False)
+    title = Column(String(200), nullable=False)
+    category = Column(String(100), nullable=True)
+    file_path = Column(String(500), nullable=False)
+    file_name = Column(String(200), nullable=False)
+    file_size_kb = Column(Integer, nullable=True)
+    uploaded_by = Column(String(150), nullable=True)
+    uploaded_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    asset = relationship("Asset", foreign_keys=[asset_id])
+
+    __table_args__ = (
+        Index("ix_asset_docs_asset", "asset_id"),
+    )
+
+
+class EmployeeDocument(Base):
+    __tablename__ = "employee_documents"
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
+    title = Column(String(200), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_name = Column(String(200), nullable=False)
+    file_size_kb = Column(Integer, nullable=True)
+    category = Column(String(100), nullable=True)
+    uploaded_by = Column(String(150), nullable=True)
+    uploaded_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+    notes = Column(Text, nullable=True)
+
+    employee = relationship("Employee", back_populates="documents")
+
+    __table_args__ = (
+        Index("ix_emp_docs_employee", "employee_id"),
+    )
+
+
+class StepDocument(Base):
+    __tablename__ = "step_documents"
+    id = Column(Integer, primary_key=True, index=True)
+    step_id = Column(Integer, nullable=False)
+    step_type = Column(String(20), nullable=False)
+    title = Column(String(200), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_name = Column(String(200), nullable=False)
+    file_size_kb = Column(Integer, nullable=True)
+    uploaded_by = Column(String(150), nullable=True)
+    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_step_docs_step", "step_id", "step_type"),
+    )
 
 
 class AuditLog(Base):
@@ -159,5 +268,13 @@ class AuditLog(Base):
     module = Column(String(50), nullable=False)
     record_id = Column(Integer, nullable=True)
     performed_by = Column(Integer, ForeignKey("users.id"))
+    performer_name = Column(String(100), nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(300), nullable=True)
     details = Column(Text, nullable=True)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    __table_args__ = (
+        Index("ix_audit_module_ts", "module", "timestamp"),
+        Index("ix_audit_record", "record_id", "module"),
+    )
